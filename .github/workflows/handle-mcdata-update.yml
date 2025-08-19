@@ -19,4 +19,4 @@ jobs:
       - run: cd .github/commands && npm install
       - run: cd .github/commands && node bump.js ${{ github.event.inputs.version }}
         env:
-          GITHUB_TOKEN: ${{ secrets.PAT_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.PAT_PASSWORD || secrets.GITHUB_TOKEN }}
