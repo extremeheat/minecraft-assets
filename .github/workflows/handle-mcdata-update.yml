@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      - run: cd .github/commands && npm install
+      - run: cd .github/commands && npm install prismarinejs/minecraft-jar-extractor
       - run: cd .github/commands && node bump.js ${{ github.event.inputs.version }}
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_PASSWORD || secrets.GITHUB_TOKEN }}

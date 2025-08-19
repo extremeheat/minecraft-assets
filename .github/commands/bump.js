@@ -32,10 +32,6 @@ async function bumpVersion(newVersion) {
       fs.rmSync(tempDir, { recursive: true, force: true })
     }
     
-    // Install minecraft-jar-extractor
-    console.log('Installing minecraft-jar-extractor...')
-    exec('npm install prismarinejs/minecraft-jar-extractor')
-    
     // Run the extractor
     console.log('Extracting minecraft assets for version:', newVersion)
     exec(`node node_modules/minecraft-jar-extractor/image_names.js ${newVersion} ${outputDir} ${tempDir}`)
@@ -83,7 +79,7 @@ async function bumpVersion(newVersion) {
     // Push the branch
     exec('git push origin bump --force')
     
-    // Create pull request
+    // Create pull request (returns { url, number })
     const pr = await gh.createPullRequest(
       `Add version ${newVersion}`,
       `This automated PR adds version ${newVersion}`,
@@ -91,9 +87,9 @@ async function bumpVersion(newVersion) {
       'master'
     )
     
-    console.log('Pull request created:', pr.html_url)
+    console.log('Pull request created:', pr.url)
     return pr
-    
+
   } catch (error) {
     console.error('Error in bump process:', error)
     throw error
@@ -113,7 +109,7 @@ module.exports = async ([newVersion], helpers) => {
   try {
     const pr = await bumpVersion(newVersion)
     if (helpers && helpers.reply) {
-      helpers.reply(`Successfully created PR for version ${newVersion}: ${pr.html_url}`)
+      helpers.reply(`Successfully created PR for version ${newVersion}: ${pr.url}`)
     }
   } catch (error) {
     console.error('Error bumping version:', error)
