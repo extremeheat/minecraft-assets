@@ -13,6 +13,63 @@ const execOutput = (cmd, options) => {
   return cp.execSync(cmd, { encoding: 'utf8', ...options }).trim()
 }
 
+function updateReadmeVersions(repoRoot) {
+  const dataDir = path.join(repoRoot, 'data')
+  const readmePath = path.join(repoRoot, 'README.md')
+  
+  // Get all version directories (excluding 'common')
+  const versions = fs.readdirSync(dataDir)
+    .filter(dir => {
+      const fullPath = path.join(dataDir, dir)
+      return fs.statSync(fullPath).isDirectory() && dir !== 'common'
+    })
+    .sort((a, b) => {
+      // Simple version comparison for minecraft versions
+      const parseVersion = (v) => v.split('.').map(n => parseInt(n, 10))
+      const aVer = parseVersion(a)
+      const bVer = parseVersion(b)
+      
+      for (let i = 0; i < Math.max(aVer.length, bVer.length); i++) {
+        const aPart = aVer[i] || 0
+        const bPart = bVer[i] || 0
+        if (aPart !== bPart) {
+          return aPart - bPart
+        }
+      }
+      return 0
+    })
+  
+  console.log('Found versions:', versions)
+  
+  // Format the versions list for the README
+  let versionsList
+  if (versions.length === 0) {
+    versionsList = ''
+  } else if (versions.length === 1) {
+    versionsList = versions[0]
+  } else {
+    const allButLast = versions.slice(0, -1)
+    const last = versions[versions.length - 1]
+    versionsList = allButLast.join(', ') + ' and ' + last
+  }
+  
+  // Read and update README
+  const readmeContent = fs.readFileSync(readmePath, 'utf8')
+  const updatedContent = readmeContent.replace(
+    /^Provide minecraft ([^\.]+\.)+.*? assets along with json files that help to use them\.$/m,
+    `Provide minecraft ${versionsList} assets along with json files that help to use them.`
+  )
+  
+  if (updatedContent !== readmeContent) {
+    fs.writeFileSync(readmePath, updatedContent)
+    console.log('Updated README.md with version list:', versionsList)
+    return true
+  } else {
+    console.log('README.md already up to date')
+    return false
+  }
+}
+
 async function bumpVersion(newVersion) {
   const workDir = process.cwd()
   const repoRoot = path.resolve(workDir, '../..')
@@ -72,9 +129,17 @@ async function bumpVersion(newVersion) {
     }
     exec('git checkout -b bump')
     
+    // Update README with new version list
+    const readmeUpdated = updateReadmeVersions(repoRoot)
+    
     // Add and commit the changes
     exec(`git add data/${newVersion}`)
-    exec(`git commit -m "Add version ${newVersion}"`)
+    if (readmeUpdated) {
+      exec('git add README.md')
+      exec(`git commit -m "Add version ${newVersion} and update README"`)
+    } else {
+      exec(`git commit -m "Add version ${newVersion}"`)
+    }
     
     // Push the branch
     exec('git push origin bump --force')
